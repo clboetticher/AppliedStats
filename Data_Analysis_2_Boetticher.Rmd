@@ -1,0 +1,770 @@
+---
+title: "Data Analysis #2 Version 2 (75 points total)"
+author: "Boetticher, Claire"
+output:
+  html_document: default
+---
+
+```{r setup, include = FALSE}
+# DO NOT ADD OR REVISE CODE HERE
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE)
+
+```
+
+##Data Analysis #2
+
+```{r analysis_setup1, message = FALSE, warning = FALSE}
+
+# Perform the following steps to start the assignment.
+ 
+# 1) Load/attach the following packages via library():  flux, ggplot2, gridExtra, moments, rockchalk, car.
+# NOTE:  packages must be installed via install.packages() before they can be loaded.
+
+library(flux)
+library(ggplot2)
+library(gridExtra)
+library(moments)
+library(rockchalk) # base R code replaces requirement for this package
+library(car)
+library(RColorBrewer)
+library(knitr)
+
+# 2) Use the "mydata.csv" file from Assignment #1 or use the file posted on the course site.  Reading
+# the files into R will require sep = "" or sep = " " to format data properly.  Use str() to check file
+# structure.
+
+mydata <- read.csv("mydata.csv", sep = ",")
+
+str(mydata)
+
+```
+
+### Test Items starts from here - There are 10 sections - total of 75 points ##############
+
+##### Section 1: (5 points)
+
+(1)(a) Form a histogram and QQ plot using RATIO. Calculate skewness and kurtosis using 'rockchalk.' Be aware that with 'rockchalk', the kurtosis value has 3.0 subtracted from it which differs from the 'moments' package. 
+
+```{r Part_1a}
+# histogram of RATIO
+cols <- c('#f7fcfd','#e5f5f9','#ccece6','#99d8c9','#66c2a4','#41ae76','#238b45','#006d2c','#00441b')
+
+hist(mydata$RATIO,
+     main = "Histogram of RATIO",
+     xlab = "RATIO",
+     col = cols)
+
+# add mean indicator
+abline(v = mean(mydata$RATIO), col = "red", lwd = 2, lty = 2)
+
+# Q-Q plot
+qqnorm(mydata$RATIO, 
+       col ="coral",
+       cex = 2, 
+       pch = 19, 
+       main ="Normal Q-Q Plot")
+
+qqline(mydata$RATIO, col="blue", lty = 1)
+
+# calculate skewness and kurtosis for RATIO
+cat(sprintf("RATIO skewness: %s\n", round(rockchalk::skewness(mydata$RATIO), digits = 3)))
+cat(sprintf("RATIO kurtosis: %s\n", round(rockchalk::kurtosis(mydata$RATIO), digits = 3)))
+```
+
+(1)(b) Tranform RATIO using *log10()* to create L_RATIO (Kabacoff Section 8.5.2, p. 199-200). Form a histogram and QQ plot using L_RATIO. Calculate the skewness and kurtosis. Create a boxplot of L_RATIO differentiated by CLASS.
+
+```{r Part_1b}
+L_RATIO <- log10(mydata$RATIO)
+mydata$L_RATIO <- L_RATIO
+
+# histogram of L_RATIO
+hist(mydata$L_RATIO,
+     main = "Histogram of L-RATIO",
+     xlab = "L_RATIO",
+     ylab = "Frequency",
+     col = brewer.pal(9, name = "Blues"))
+
+# add mean indicator
+abline(v = mean(mydata$L_RATIO), col = "green", lwd = 2, lty = 2)
+
+# Q-Q plot
+qqnorm(mydata$L_RATIO, 
+       col ="purple1",
+       cex = 2, 
+       pch = 19, 
+       main ="Normal Q-Q Plot")
+
+qqline(mydata$L_RATIO, col="springgreen1")
+
+# calculate skewness and kurtosis for L_RATIO
+cat(sprintf("L_RATIO skewness: %s\n", round(rockchalk::skewness(mydata$L_RATIO), digits = 3)))
+cat(sprintf("L_RATIO kurtosis: %s\n", round(rockchalk::kurtosis(mydata$L_RATIO), digits = 3)))
+
+# set up observations by class
+mydata_A1 <- mydata[which(mydata$CLASS == "A1"),]
+mydata_A2 <- mydata[which(mydata$CLASS == "A2"),]
+mydata_A3 <- mydata[which(mydata$CLASS == "A3"),]
+mydata_A4 <- mydata[which(mydata$CLASS == "A4"),]
+mydata_A5 <- mydata[which(mydata$CLASS == "A5"),]
+
+# # create CLASS vector
+classes = c("A1","A2","A3","A4","A5")
+
+# create boxplot
+boxplot(mydata_A1$L_RATIO, mydata_A2$L_RATIO, mydata_A3$L_RATIO, mydata_A4$L_RATIO, mydata_A5$L_RATIO,
+        main = "L RATIO by Class",
+        names = classes,
+        col=brewer.pal(n=5,name="Set1"),
+        notch = T,
+        range = 1.5,
+        ylab = "L_RATIO",
+        labels = TRUE)
+```
+
+(1)(c) Test the homogeneity of variance across classes using *bartlett.test()* (Kabacoff Section 9.2.2, p. 222). 
+
+```{r Part_1c}
+bartlett.test(L_RATIO ~ CLASS, mydata)
+
+# compare with homogeneity of variance across classes for RATIO
+
+bartlett.test(RATIO ~ CLASS, mydata)
+```
+
+**Essay Question: Based on steps 1.a, 1.b and 1.c, which variable RATIO or L_RATIO exhibits better conformance to a normal distribution with homogeneous variances across age classes?  Why?** 
+
+Answer: L_RATIO exhibits better conformance to a normal distribution with homogeneous variances across age classes. Evidence from graphs, the skewness and kurtosis calculations, and the Bartlett test for each variable support this conclusion. 
+
+While this is not quite as visible in the histograms for each, we can see from the Q-Q plot for RATIO that there are significant outliers not conforming to the line, curving off in the extremities. Normal Q-Q plots that exhibit this behavior usually mean data with extreme values than would be expected if they truly came from a normal distribution. The skewness for RATIO is 0.715, indicating moderate positive skewness; the kurtosis value of 1.667 for RATIO (actually 4.667, since rockchalk calculates the excess kurtosis value), suggests a leptokurtic distribution, with longer and fatter tails and a higher central peak than a normal distribution. Finally, the Bartlett test outputs, as a test for homogeneity of variances, support this as well. This test shows a very small p-value, so we reject the null hypothesis that variance is the same for all treatment groups. Additionally, the K-squared value of 21.49 is greater than any critical value from the chi-square distribution with this df value of 4, whether alpha equals .05, .01, or even .001 (critical values equaling 9.488, 13.277, and 18.467, respectively). We can reject the null hypothesis of equality of variances across groups. 
+ 
+For L_RATIO, on the other hand, the points in the Q-Q plot show much more conformance to a relatively straight line, suggesting that the quantiles of the dataset are a closer match to what the quantiles of the dataset would theoretically be if it were normally distributed. The skewness calculation of -0.094 suggests the distribution is roughly symmetric. The excess kurtosis of 0.535, quite close to the zero excess kurtosis level of a normal distribution, supports this conformance as well. Finally, the Bartlett test for L_RATIO across classes shows a p-value of .5267, greater than significance level of .05 (assumption), so we fail to reject the null hypothesis. The test statistic value of 3.1891 could not be greater than the critical value of the chi-square distribution with k-1 degrees of freedom, whether alpha equals .05, .01, or even .001 (critical values equaling 9.488, 13.277, and 18.467, respectively). This means we fail to reject the null hypothesis of equality of variances across groups.
+
+##### Section 2 (10 points) ###############################
+
+(2)(a) Perform an analysis of variance with *aov()* on L_RATIO using CLASS and SEX as the independent variables (Kabacoff chapter 9, p. 212-229). Assume equal variances. Perform two analyses. First, fit a model with the interaction term CLASS:SEX. Then, fit a model without CLASS:SEX. Use *summary()* to obtain the analysis of variance tables (Kabacoff chapter 9, p. 227).
+
+```{r Part_2a}
+# ANOVA with CLASS:SEX
+anova1 <- aov(L_RATIO ~ CLASS*SEX, data = mydata)
+summary(anova1)
+
+# ANOVA without CLASS:SEX
+anova2 <- aov(L_RATIO ~ CLASS + SEX, data = mydata)
+summary(anova2)
+
+# interaction plot for further analysis of relationship
+interaction.plot(mydata$SEX, mydata$CLASS, mydata$L_RATIO,
+                 xlab = "SEX", ylab = "L_RATIO mean",
+                 main = "Interaction Plot for CLASS and SEX",
+                 trace.label = "CLASS",
+                 fixed = TRUE, col = 2:3, leg.bty = "o")
+```
+
+**Essay Question:  Compare the two analyses.  What does the non-significant interaction term suggest about the relationship between L_RATIO and the factors CLASS and SEX?**
+
+Answer: Interaction effects represent the combined effects of factors on the dependent measure, in this case the effects of CLASS and SEX on L_RATIO. When an interaction effect is present, the impact of one factor depends on the level of the other factor. In these two analyses, ANOVA gives us the ability to estimate and test interaction effects in order to better understand group differences. 
+
+For the analysis of variance on L_RATIO using CLASS and SEX as the independent variables, from p-values we see that the main effect of CLASS and the main effect of SEX are both significant, but the interaction between those factors (CLASS:SEX) is not significant (with a p-value of 0.867). The second analysis, without the CLASS:SEX interaction term, shows a similar pattern for significance within variables. Within CLASS and within SEX, as the main effects, there does appear to be a statistically significant interaction given the resulting p-values. For the model fitted without CLASS:SEX, we can see further evidence of this statistical significance by the two resulting p-values for CLASS and SEX without the interaction term. The additional interaction plot shows that CLASS and SEX move in similar directions, with the exception of A1. This supports the first analysis finding of CLASS:SEX being non-significant, which suggests that the interaction between L_RATIO and SEX does not depend on CLASS. Likewise, an interaction plot swapping out CLASS and SEX shows that in general, the interaction between L_RATIO and CLASS does not depend on SEX. CLASS does seem to be an important variable to consider for a multiple regression model.
+
+(2)(b) For the model without CLASS:SEX (i.e. an interaction term), obtain multiple comparisons with the *TukeyHSD()* function. Interpret the results at the 95% confidence level (*TukeyHSD()* will adjust for unequal sample sizes). 
+
+```{r Part_2b}
+tuk <- TukeyHSD(anova2)
+tuk
+
+# plot results 
+plot(tuk)
+```
+
+**Additional Essay Question:  first, interpret the trend in coefficients across age classes. What is this indicating about L_RATIO?  Second, do these results suggest male and female abalones can be combined into a single category labeled as 'adults?' If not, why not?**
+
+Answer: The Tukey test provides a useful post-hoc comparison for evaluating pair means, with this one excluding the interaction term of CLASS:SEX. Looking at the "diff" and "p adj" columns from the output, we can assess whether a significant difference exists between L_RATIO means at various levels. 
+
+Using the p-values from the table, we see there is no significant difference in L_RATIO means between A2-A1 (p = 0.692 > 0.05). The fact that this pair contains zero in the confidence interval reinforces this. On the other hand, there is a significant difference in mean differences between all other pairings from the ANOVA test by CLASS level (all p values are less than 0.05) at 95% family-wise confidence level. This suggests a meaningful difference in mean L_RATIO values as abalones age from the A2 level and older, perhaps suggesting a growth rate worth noting for harvesting decisions. 
+
+For the Tukey comparison of means between SEX levels, we see a significant difference in L_RATIO means between infants and females (p = 0.038 < 0.05) and males and infants (p = 0.011 < 0.05), versus no significant difference in mean differences between males and females. This does suggest we could combine male and female abalones into a single larger adult category for further analysis. However, analyses based on this grouping should be evaluated in the context of previous assessments in this assignment where SEX appeared to be correlated to various physical characteristics. If L_RATIO results in being a high-impact variable in the final harvesting decision-making process, this decision will likely make sense, as long as effects of SEX are thoroughly studied beforehand. It is completely possible that like most living things, an abalone's sex has some relationship to physical characteristics that should not be completely ignored.
+
+######  Section 3: (10 points) ##################
+
+(3)(a1) We combine "M" and "F" into a new level, "ADULT". (While this could be accomplished using *combineLevels()* from the 'rockchalk' package, we use base R code because many students do not have access to the rockchalk package.) This necessitated defining a new variable, TYPE, in mydata which had two levels:  "I" and "ADULT". 
+
+```{r Part_3a1}
+# here we show how to define the new variable TYPE using only base R functions (no need for outside packages)
+mydata$TYPE <- character(nrow(mydata))  # initialize the TYPE column as all blanks
+for (i in seq(along = mydata$SEX)) {
+  mydata$TYPE[i] <- 'I'
+  if (mydata$SEX[i] == 'M' || mydata$SEX[i] == 'F') mydata$TYPE[i] <- 'ADULT'
+}
+mydata$TYPE <- factor(mydata$TYPE)
+cat('\nCheck on definition of TYPE object (should be an integer): ', typeof(mydata$TYPE))
+cat('\nmydata$TYPE is treated as a factor: ', is.factor(mydata$TYPE), '\n')
+table(mydata$SEX, mydata$TYPE)
+
+```
+(3)(a2)  Present side-by-side histograms of VOLUME. One should display infant volumes and, the other, adult volumes. 
+
+```{r Part_3a2}
+VOL_infant <- mydata$VOLUME[which(mydata$TYPE == "I")]
+VOL_adult <- mydata$VOLUME[which(mydata$TYPE == "ADULT")]
+
+# display side by side
+par(mfrow = c(1,2))
+
+infant_cols <- c('#ece7f2','#d0d1e6','#a6bddb','#74a9cf','#3690c0','#0570b0','#045a8d','#023858')
+
+hist(VOL_infant,
+     main = "Infant Volumes",
+     xlab = "Volume Measures",
+     col = infant_cols,
+     ylim = c(0,140))
+
+adult_cols <- c('#fff5f0','#fee0d2','#fcbba1','#fc9272','#fb6a4a','#ef3b2c','#cb181d','#a50f15','#67000d')
+
+hist(VOL_adult,
+     main = "Adult Volumes",
+     xlab = "Volume Measures",
+     col = adult_cols,
+     ylim = c(0,140))
+```
+
+
+**Essay Question: Compare the histograms.  How do the distributions differ? Are there going to be any difficulties separating infants from adults based on VOLUME?**
+
+Answer: The histogram of adult volumes resembles a normal distribution, whereas the infant histogram shows a skewed distribution to the right (positively skewed). This suggests a larger number of occurrences in lower volume values, and many less in the higher volume values. The overlap of these two distributions at volumes of 100 cubic centimeters or higher does suggest difficulty in separating based on VOLUME, based on interpretation of these two histograms and their shape and volume measures. The earlier assignment's discussion around challenges classifying infants versus adults should be considered, essentially that not enough is known about the data collection process and the potential errors with ring classification to be completely confident in any one variable serving to divide these two TYPE levels.
+
+(3)(b) Create a scatterplot of SHUCK versus VOLUME and a scatterplot of their base ten logarithms, labeling the variables as L_SHUCK and L_VOLUME. Please be aware the variables, L_SHUCK and L_VOLUME, present the data as orders of magnitude (i.e. VOLUME = 100 = 10^2 becomes L_VOLUME = 2). Use color to differentiate CLASS in the plots. Repeat using color to differentiate by TYPE. 
+
+```{r Part_3b}
+# SHUCK versus VOLUME, by TYPE
+ggplot(data = mydata, aes(x = mydata$SHUCK, y = mydata$VOLUME)) + 
+  geom_point(aes(color = TYPE),size = 2) +
+  labs(title = "3b) SHUCK versus VOLUME by TYPE", x="SHUCK", y="VOLUME") +
+  scale_color_manual(name = "TYPE", labels = c("Adult", "Infant"), values = c("ADULT" = "orange", "I" = "purple"))
+
+# L_SHUCK versus L_VOLUME, by TYPE
+L_SHUCK <- log10(mydata$SHUCK)
+L_VOLUME <- log10(mydata$VOLUME)
+mydata$L_SHUCK <- L_SHUCK
+mydata$L_VOLUME <- L_VOLUME
+
+ggplot(data = mydata, aes(x = mydata$L_SHUCK, y = mydata$L_VOLUME)) + 
+  geom_point(aes(color = TYPE), size = 2) + 
+  labs(title = "3b) L_SHUCK versus L_VOLUME by TYPE", x="L_SHUCK", y="L_VOLUME") +
+  scale_color_manual(name = "TYPE", labels = c("Adult", "Infant"), values = c("ADULT" = "orange", "I" = "purple"))
+
+# SHUCK versus VOLUME, by CLASS
+ggplot(data = mydata, aes(x = mydata$SHUCK, y = mydata$VOLUME)) + 
+  geom_point(aes(color = CLASS), size = 2) + 
+  labs(title = "3b) SHUCK versus VOLUME by CLASS", x="SHUCK", y="VOLUME") +
+  scale_colour_brewer(palette = "Set2")
+
+# L_SHUCK versus L_VOLUME, by CLASS
+ggplot(data = mydata, aes(x = mydata$L_SHUCK, y = mydata$L_VOLUME)) + 
+  geom_point(aes(color = CLASS), size = 2) + 
+  labs(title = "3b) L_SHUCK versus L_VOLUME by CLASS", x="L_SHUCK", y="L_VOLUME") +
+  scale_colour_brewer(palette = "Set2")
+```
+
+**Additional Essay Question:  Compare the two scatterplots. What effect(s) does log-transformation appear to have on the variability present in the plot?  What are the implications for linear regression analysis? Where do the various CLASS levels appear in the plots? Where do the levels of TYPE appear in the plots?**
+
+Answer: SHUCK versus VOLUME by TYPE shows a relatively linear strong positive correlation at lower SHUCK (< ~75) and VOLUME (~300) values, with a looser correlation at higher values and presence of outliers. Observations of adult TYPE are predominant at all values of SHUCK and VOLUME, and represent the majority of higher values and outliers. Infants are more concentrated at the lower values of SHUCK and VOLUME. L_SHUCK versus L_VOLUME by TYPE, by comparison, shows a much stronger positive correlation, with points conforming more to a line of fit. Adults are more segmented to the upper L_SHUCK (> ~1.0) and L_VOLUME (> ~2) values, with infants more concentrated at lower levels. The same phenomenon of correlation strength can be seen in the scatterplot for SHUCK versus VOLUME by CLASS and L-SHUCK versus L_VOLUME by CLASS. The observations before the log transformation do show a moderate positive correlation, but the spread of classes throughout the range of SHUCK and VOLUME values does not suggest anything too conclusive in terms of relationship of one variable on the other. After the log transformation, the observations fit a much tighter correlation pattern, with the lowest A1 class in the lower range of L_SHUCK and L_VOLUME values, as might be expected with growth as abalones age, and the older class of A5 concentrated at the higher values. Transforming the SHUCK and VOLUME variables seems to help address the potential for nonlinearity in their relationship and correct for skew and outliers. Specifically, transforming a predictor variable like VOLUME can assist when the assumption of linearity is violated. Transforming the response variable (SHUCK) can help address heteroscedasticity, or nonconstant error variance. Generally, this log transformation is a helpful way to test for correlation between variables, which facilitates linear regression analysis insofar as conclusions made are based on the transformed data.
+
+
+######   Section 4: (5 points) ###################################
+
+(4)(a1) Since abalone growth slows after class A3, infants in classes A4 and A5 are considered mature and candidates for harvest. Reclassify the infants in classes A4 and A5 as ADULTS. This reclassification could have been achieved using *combineLevels()*, but only on the abalones in classes A4 and A5. We will do this recoding of the TYPE variable using base R functions. We will use this recoded TYPE variable, in which the infants in A4 and A5 are reclassified as ADULTS, for the remainder of this data analysis assignment. 
+
+```{r Part_4a1}
+for (i in seq(along = mydata$TYPE)) {
+  if (mydata$CLASS[i] == 'A4' || mydata$CLASS[i] == 'A5') mydata$TYPE[i] <- 'ADULT'
+}
+mydata$TYPE <- factor(mydata$TYPE)
+cat('\nCheck on redefinition of TYPE object (should be an integer): ', typeof(mydata$TYPE))
+cat('\nmydata$TYPE is treated as a factor: ', is.factor(mydata$TYPE), '\n')
+cat('\nThree-way contingency table for SEX, CLASS, and TYPE:\n')
+print(table(mydata$SEX, mydata$CLASS, mydata$TYPE))
+```
+
+(4)(a2) Regress L_SHUCK as the dependent variable on L_VOLUME, CLASS and TYPE (Kabacoff Section 8.2.4, p. 178-186, the Data Analysis Video #2 and Black Section 14.2). Use the multiple regression model: L_SHUCK ~ L_VOLUME + CLASS + TYPE. Apply *summary()* to the model object to produce results.
+
+```{r Part_4a2}
+model <- lm(L_SHUCK ~ L_VOLUME + CLASS + TYPE, data = mydata)
+summary(model)
+```
+
+**Essay Question:  Interpret the trend in CLASS levelcoefficient estimates? (Hint:  this question is not asking if the estimates are statistically significant. It is asking for an interpretation of the pattern in these coefficients, and how this pattern relates to the earlier displays).**
+
+Answer: This model regresses L_SHUCK as the dependent variable on L_VOLUME, CLASS and TYPE, the explanatory variables, in order to explore the relationship between L_SHUCK and these possible predictors. This multiple linear regression model is set up to separate the predictor variables. With more than one predictor variable present, the regression coefficients indicate the increase in L_SHUCK for a unit change in the predictor variable, holding all other predictor variables constant. CLASS level across all classes have a negative relationship with L_SHUCK, as shown by the coefficient estimates. Given the way this model is fit, we can conclude the predictor variables account for ~95 percent of the variance in L_SHUCK, but this is assuming they do not interact. The linear correlation coefficient generally quantifies the strength of a linear relationship, and significant magnitudes indicate the likely usefulness of the linear regression equation for the purpose of prediction.  
+
+The intercept is the expected value of L_SHUCK considering the average values of the predictor variables. For CLASS levels, the slope term given by the estimate in the model differs by level. The coefficient estimate suggests the average effect on L_SHUCK of a one unit increase in the predictor, CLASS in this case. While CLASS has a negative relationship with L_SHUCK regardless of level, the strength of that negative relationship increases as CLASS level increases. For example, the slope of the model shows that for every a UNIT WHAT increase in the CLASS level, the L_SHUCK value goes down by the relevant slope value. For CLASS A2, this decrease is only 0.018. The amount of decrease for CLASS A5 grows to .117.  The t-statistic values in the model mirror this change over CLASS level, moving further from zero as CLASS level increases (from -1.636 for A2 to -8.288 for A5). This could indicate that CLASS level is a more influential predictor as level increases from A2 to A5. The coefficient Pr (>|t|) value is a sign of how likely we are to observe a relationship between the CLASS predictor and response L_SHUCK. The p-value for A2 (0.102) does not seem highly significant. P-values as CLASS level increases decreases, though, with p-values for CLASS levels A3, A4, and A5 quite small, suggesting a relationship between those levels and L_SHUCK (assuming a cut-off point of a p-value of 0.05 or less).
+
+**Additional Essay Question:  Is TYPE an important predictor in this regression? (Hint:  This question is not asking if TYPE is statistically significant, but rather how it compares to the other independent variables in terms of its contribution to predictions of L_SHUCK for harvesting decisions.)  Explain your conclusion.**
+
+Answer: From this model, TYPE has a very moderately negative relationship with L_SHUCK, as shown by the coefficient estimate of -0.021. In terms of its p-value (-2.744) and coefficient Pr (>|t|) of 0.006, which is less than the 0.05 cutoff, we have evidence of a relationship between of L_SHUCK and TYPE, but possibly less influential than CLASS as seen above. The L_SHUCK versus L_VOLUME scatterplot from 3B shows a relatively strong positive linear relationship between those two variables, but the Infant and Adult TYPE observations are represented throughout the scatterplot (with Adults more concentrated at higher values of L_SHUCK and L_VOLUME, to be expected with growth from aging). In general, CLASS and L_VOLUME seem to be more influential as predictors.
+
+-----
+
+The next two analysis steps involve an analysis of the residuals resulting from the regression model in (4)(a) (Kabacoff Section 8.2.4, p. 178-186, the Data Analysis Video #2).
+
+-----
+
+###### Section 5: (5 points) #################################
+
+(5)(a) If "model" is the regression object, use model$residuals and construct a histogram and QQ plot. Compute the skewness and kurtosis. Be aware that with 'rockchalk,' the kurtosis value has 3.0 subtracted from it which differs from the 'moments' package. 
+
+```{r Part_5a}
+par(mfrow = c(1,1))
+
+hist(model$residuals,
+     main = "Histogram of Residuals",
+     xlab = "Residuals",
+     col = "cyan")
+
+# add mean indicator
+abline(v = mean(model$residuals), col = "red", lwd = 2, lty = 2)
+
+# Q-Q plot
+qqnorm(model$residuals, 
+       col ="lawngreen",
+       cex = 2, 
+       pch = 19, 
+       main ="Q-Q Plot of Residuals")
+
+qqline(model$residuals, col="mediumblue", lty = 1)
+
+cat(sprintf("Residuals skewness: %s\n", round(rockchalk::skewness(model$residuals), digits = 3)))
+cat(sprintf("Residuals kurtosis: %s\n", round(rockchalk::kurtosis(model$residuals), digits = 3)))
+```
+
+(5)(b) Plot the residuals versus L_VOLUME, coloring the data points by CLASS and, a second time, coloring the data points by TYPE. Keep in mind the y-axis and x-axis may be disproportionate which will amplify the variability in the residuals. Present boxplots of the residuals differentiated by CLASS and TYPE (These four plots can be conveniently presented on one page using *par(mfrow..)* or *grid.arrange()*. Test the homogeneity of variance of the residuals across classes using *bartlett.test()* (Kabacoff Section 9.3.2, p. 222).  
+
+```{r Part_5b, fig.width=9}
+# residuals versus L_VOLUME, by CLASS
+p1 <- ggplot(data = mydata, aes(x = mydata$L_VOLUME, y = model$residuals)) + 
+  geom_point(aes(color = CLASS), size = 2) + 
+  labs(title = "5b) Residuals versus L_VOLUME by CLASS", x="L_VOLUME", y="Residuals") +
+  scale_colour_brewer(palette = "Set1") +
+  xlim(0, 4) +
+  ylim(-0.4, 0.4)
+p1
+
+# residuals versus L_VOLUME, by TYPE
+p2 <- ggplot(data = mydata, aes(x = mydata$L_VOLUME, y = model$residuals)) + 
+  geom_point(aes(color = TYPE),size = 2) + 
+  labs(title = "5b) Residuals versus L_VOLUME by TYPE", x="L_VOLUME", y="Residuals") +
+  scale_color_manual(name = "TYPE", labels = c("Adult", "Infant"), values = c("ADULT" = "orange", "I" = "purple")) +
+  xlim(0, 4) +
+  ylim(-0.4, 0.4)
+p2
+
+# set up residuals by CLASS
+residuals_A1 <- subset(model$residuals, mydata$CLASS == "A1")
+residuals_A2 <- subset(model$residuals, mydata$CLASS == "A2")
+residuals_A3 <- subset(model$residuals, mydata$CLASS == "A3")
+residuals_A4 <- subset(model$residuals, mydata$CLASS == "A4")
+residuals_A5 <- subset(model$residuals, mydata$CLASS == "A5")
+
+par(mfrow = c(1,2))
+
+# boxplot
+boxplot(residuals_A1, residuals_A2, residuals_A3, residuals_A4, residuals_A5,
+        main = "Residuals by CLASS",
+        names = classes,
+        col=brewer.pal(n=5,name="Set1"),
+        notch = T,
+        range = 1.5,
+        ylab = "Residuals",
+        labels = TRUE)
+
+# set up residuals by TYPE
+residuals_I <- subset(model$residuals, mydata$TYPE == "I")
+residuals_A <- subset(model$residuals, mydata$TYPE == "ADULT")
+
+# create TYPE vector
+types = c("Infant","Adult")
+
+# boxplot
+boxplot(residuals_I, residuals_A,
+        main = "Residuals by TYPE",
+        names = types,
+        col= c('purple1', 'darkorange'),
+        notch = T,
+        range = 1.5,
+        ylab = "Residuals",
+        labels = TRUE)
+
+# homogeneity of variance of the residuals across classes using *bartlett.test()* 
+bartlett.test(model$residuals ~ CLASS, mydata)
+
+# run additional bartlett test for residuals across types
+bartlett.test(model$residuals ~ TYPE, mydata)
+```
+
+**Essay Question:  What is revealed by the displays and calculations in (5)(a) and (5)(b)? Does the model 'fit'?  Does this analysis indicate that L_VOLUME, and ultimately VOLUME, might be useful for harvesting decisions? Discuss.**  
+
+Answer: Assessing the validity of a fitted regression model involves looking for indications that the fitted model does not meet regression assumptions. Much of this entails examining residuals, essentially the difference between the actual observed response values and the response values that the model predicted. The residuals analysis from this section's displays and calculations help test some of the assumptions underlying regression, such as the model is linear, the error terms have constant variances, the error terms are independent, and the error terms are normally distributed. 
+
+The residuals histogram and Q-Q plot both indicate residuals conforming to a mostly normal distribution, which helps determine how well the model fits the data; these two plots do show some outliers at the upper and lower ends of the distributions, though, so these points are worth noting as evidence of potentially misrecorded/miscoded data or data points that do not conform to the general trend. They could be evidence of another variable that needs to be taken into account, and caution should be used since a few outliers can drastically shift the predicted line. The residuals' skewness is -0.059, indicating a slight negative skew but still quite close to zero, and kurtosis is 0.343. As the excess kurtosis value, this is also close to zero, for a normal distribution. 
+ 
+In the residuals versus L_VOLUME by CLASS scatterplot, the data points flare out in a very minor way, indicating the potential for a pattern of heteroscedasticity, which would mean a violation of the assumption of constant variance for error terms. In general, though, they reflect a mostly healthy residual plot. There is a general pattern of error variance at lower L_VOLUME values for lower class levels - A1 observations predominate in the left-side of the plot. As L_VOLUME values grow, the incidence of observations by increasing class levels occurs, with the highest class levels at the far right of the plot. Likewise for the residuals versus L_VOLUME by TYPE scatterplot, the error variance is smaller for smaller values of L_VOLUME and greater for larger values of L_VOLUME, again suggesting that variance for error terms is not constant, though we must be careful since the range in x-axis labels versus y-axis labels may over-exaggerate this appeared variability. Somewhat mirroring the plot of residuals versus L_VOLUME by type, infant observations are seen at smaller error variance terms and lower L_VOLUME values, and adult observations are seen at higher error variance and L_VOLUME levels.
+
+The residuals by CLASS boxplot shows a relatively consistent distribution of residuals values across the CLASS levels. Upper outliers exist in CLASS A1 through A3, and lower outliers exist in CLASS A3 through A5, with A3 having the most outliers. The closeness of residual median values at the center of each box plot shows consistency in distribution across classes, although the heights of A1 and A3 are slightly smaller than the other three classes. 
+ 
+The residuals by TYPE boxplot also shows very similar distributions between infants and adults. The median is quite close to zero for both, with relatively equal length whiskers. The main difference is that residuals for adults have more outliers at the low and high end, which would merit further study. Since the errors resemble a normal distribution in the overall histogram and Q-Q plot, this suggests that perhaps the adult populations has some observations that are either miscoded or simply represent cases far afield of the rest of the population. In general, with infants in CLASS A4 and A5 being re-coded as TYPE adult, the assumption is that the grouping between the two age TYPES represents a more accurate split for harvesting decision-making purposes. This does not preclude the possibility of outliers, though, with larger magnitudes of difference between the actual observed response values and the response values that the model predicted. These could be candidates for dropping from the analysis, if further analysis were conducted.
+
+Referring back to the model output from 4a, it is worth noting other calculations that help assess the model's validity. The value of F for this analysis is 3287 on 6 and 1029 degrees of freedom, with a p-value of < 2.2e-16, which is significant at alpha = 0.05. The null hypothesis is rejected, and we see that L_VOLUME and CLASS A3, A4, and A5 are all significant predictors. The residual standard error, 0.08297 on 1029 degrees of freedom, is an indication of the quality of the linear regression fit. This means that the average amount by which L_SHUCK units will deviate from the true regression line by approximately 0.08297 grams. This is a relatively low standard error value, indicating that the error of the regression model is sufficiently small to justify further use of the model. Additionally, the R squared coefficient of determination, another measure used to determine model goodness of fit, is 0.9504 (Multiple R-squared) or 0.9501 (Adjusted R-squared, which considers additional information each new independent variable brings to the model and the changed degrees of freedom). In other words, 95 percent of the variation in the outcome can be explained by this model (this regression line): we see strong predictability of this regression model. 
+
+A final calculation worth noting is that the Bartlett test for residuals across CLASS calculates a p-value that is not statistically significant (0.4498 is greater than 0.05), so we are not able to reject the null hypothesis of equal variances across these combinations.
+
+Revisiting the assumptions underlying the model in order to prevent employment of a model that misconstrues relationships between variables, the following conclusions are made for each assumption and consideration:  
+- Normality: this assumption seems satisfied given displays and calculations discussed above   
+- Independence: without more knowledge of how the data on this abalone sample was collected, it is difficult to conclude that the dependent variable values are independent  
+- Linearity: with certain predictor variables, we see a pattern of linearity, but for others not. This assumption is not satisfied given the way this particular model, with L_VOLUME, CLASS, and SEX as predictors, is constructed.  
+- Homoscedasticity: this assumption seems satisfied.   
+- Outliers: there are likely a few influential cases affecting this analysis, and further analysis would warrant experimentation with dropping them.  
+
+These assumptions, however, for an exploratory study with potential for issues with data collection, abalone ring classification, and the possibility of excluding other influential variables in L_SHUCK and a related harvest timing decision, all depend on the particular study and data set. Violations could be more or less serious depending on the case. Tests of assumptions relying on p-values, for example, rely upon sample sizes. In this study, given the problematic nature of coding observations by TYPE and RING, this nuance must be taken into account. Ultimately, L_VOLUME, as a transformed variable, and VOLUME do seem to be useful variables of analysis for determining appropriate rules for harvesting decisions due to these combined indications of goodness of fit.
+
+-----
+
+There is a tradeoff faced in managing abalone harvest. The infant population must be protected since it represents future harvests. On the other hand, the harvest should be designed to be efficient with a yield to justify the effort. This assignment will use VOLUME to form binary decision rules to guide harvesting. If VOLUME is below a "cutoff" (i.e. a specified volume), that individual will not be harvested. If above, it will be harvested. Different rules are possible.
+
+The next steps in the assignment will require consideration of the proportions of infants and adults harvested at different cutoffs. For this, similar "for-loops" will be used to compute the harvest proportions. These loops must use the same values for the constants min.v and delta and use the same statement "for(k in 1:10000)."  Otherwise, the resulting infant and adult proportions cannot be directly compared and plotted as requested. Note the example code supplied below.
+
+-----
+
+#### Section 6: (5 points) ########################
+
+(6)(a) A series of volumes covering the range from minimum to maximum abalone volume will be used in a "for loop" to determine how the harvest proportions change as the "cutoff" changes. Code for doing this is provided.
+
+```{r Part_6a}
+
+idxi <- mydata$TYPE == "I"
+idxa <- mydata$TYPE == "ADULT"
+
+max.v <- max(mydata$VOLUME)
+min.v <- min(mydata$VOLUME)
+delta <- (max.v - min.v)/10000
+prop.infants <- numeric(10000)
+prop.adults <- numeric(10000)
+volume.value <- numeric(10000)
+
+total.infants <- sum(idxi)  
+total.adults <- sum(idxa)
+
+for (k in 1:10000) { 
+	value <- min.v + k*delta
+	volume.value[k] <- value
+	prop.infants[k] <- sum(mydata$VOLUME[idxi] <= value)/total.infants
+	prop.adults[k] <-  sum(mydata$VOLUME[idxa] <= value)/total.adults
+}
+
+# prop.infants shows the impact of increasing the volume cutoff for
+# harvesting. The following code shows how to "split" the population at
+# a 50% harvest of infants.
+
+n.infants <- sum(prop.infants <= 0.5)
+split.infants <- min.v + (n.infants + 0.5)*delta  # This estimates the desired volume.
+split.infants
+
+n.adults <- sum(prop.adults <= 0.5)
+split.adults <- min.v + (n.adults + 0.5)*delta
+split.adults
+
+```
+
+(6)(b) Present a plot showing the infant proportions and the adult proportions versus volume.value. Compute the 50% "split" volume.value for each and show on the plot.   
+
+```{r Part_6b}
+# checking values
+head(volume.value)
+head(prop.infants)
+head(prop.adults)
+length(volume.value)
+length(prop.infants)
+length(prop.adults)
+
+plot(x = volume.value, y = prop.infants, 
+     col = "coral", 
+     cex = 2, 
+     pch = ".",
+     main = "Proportion of Adults and Infants Protected",
+     xlab = "Volume",
+     ylab = "Proportion")
+lines(x = volume.value, y = prop.adults,
+      col = "aquamarine", 
+      cex = 2, 
+      pch = ".")
+abline(v = split.infants, col = "black", lty = 2)
+abline(v = split.adults, col = "black", lty = 2)
+abline(h = 0.5, col = "black", lty = 2)
+text(210, 0.45, "133.82", cex = 0.8)
+text(450, 0.45, "384.51", cex = 0.8)
+
+legend("bottomright", 
+       legend = c("Infant", "Adult"), 
+       col = c("coral","aquamarine"),
+       pch = 15,
+       bty = "0", 
+       cex = 0.8, 
+       text.col = "black", 
+       horiz = F , 
+       inset = c(0.1, 0.1))
+```
+
+**Essay Question:  The two 50% "split" values serve a descriptive purpose illustrating the difference between the populations. What do these values suggest regarding possible cutoffs for harvesting?** 
+
+Answer: It appears there is a good cutoff between the two splits, which would reduce both false positives and true negatives.
+
+-----
+
+This part will address the determination of a volume.value corresponding to the observed maximum difference in harvest percentages of adults and infants. To calculate this result, the vectors of proportions from item (6) must be used. These proportions must be converted from "not harvested" to "harvested" proportions by using (1 - prop.infants) for infants, and (1 - prop.adults) for adults. The reason the proportion for infants drops sooner than adults is that infants are maturing and becoming adults with larger volumes.
+
+-----
+
+###### Section 7: (10 points)  #######################
+
+(7)(a) Evaluate a plot of the difference ((1 - prop.adults) - (1 - prop.infants)) versus volume.value. Compare to the 50% "split" points determined in (6)(a). There is considerable variability present in the peak area of this plot. The observed "peak" difference may not be the best representation of the data. One solution is to smooth the data to determine a more representative estimate of the maximum difference.
+
+```{r Part_7a}
+difference <- ((1 - prop.adults) - (1 - prop.infants))
+head(difference)
+
+plot(x = volume.value, y = difference, 
+     col = "red", 
+     cex = 2, 
+     pch = ".",
+     main = "Difference in Harvest Proportions",
+     xlab = "Volume",
+     ylab = "Difference in Proportions Harvested")
+abline(v = 262.143, col = "blue", lty = 2)
+text(400, 0.05, "Volume = 262.143", cex = 0.8)
+```
+
+(7)(b) Since curve smoothing is not studied in this course, code is supplied below. Execute the following code to create a smoothed curve to append to the plot in (a). The procedure is to individually smooth (1-prop.adults) and (1-prop.infants) before determining an estimate of the maximum difference. 
+
+```{r Part_7b}
+
+y.loess.a <- loess(1 - prop.adults ~ volume.value, span = 0.25,
+	family = c("symmetric"))
+y.loess.i <- loess(1 - prop.infants ~ volume.value, span = 0.25,
+	family = c("symmetric"))
+smooth.difference <- predict(y.loess.a) - predict(y.loess.i)
+
+```
+
+(7)(c) Present a plot of the difference ((1 - prop.adults) - (1 - prop.infants)) versus volume.value with the variable smooth.difference superimposed. Determine the volume.value corresponding to the maximum smoothed difference (Hint:  use *which.max()*). Show the estimated peak location corresponding to the cutoff determined.
+
+```{r Part_7c}
+# find volume.value that corresponds to the maximum smoothed difference
+cat(sprintf("volume.value corresponding to maximum smoothed difference: %s\n", round(volume.value[which.max(smooth.difference)], 3)))
+
+plot(x = volume.value, y = difference, 
+     col = "red", 
+     cex = 2, 
+     pch = ".",
+     main = "Difference in Harvest Proportions",
+     xlab = "Volume",
+     ylab = "Difference in Proportions Harvested")
+abline(v = 262.143, col = "blue", lty = 2)
+text(400, 0.05, "Volume = 262.143", cex = 0.8)
+lines(x = volume.value, y = smooth.difference,
+      col = "black",
+      cex = 3,
+      pch = ".")
+```
+
+(7)(d) What separate harvest proportions for infants and adults would result if this cutoff is used? Show the separate harvest proportions (NOTE:  the adult harvest proportion is the "true positive rate" and the infant harvest proportion is the "false positive rate").
+
+Code for calculating the adult harvest proportion is provided.
+
+```{r Part_7d}
+# calculate the infant harvest proportion
+(1 - prop.infants)[which.max(smooth.difference)]   # [1] 0.1764706
+cat(sprintf("Infant harvest proportion (false positive rate): %s\n", round((1 - prop.infants)[which.max(smooth.difference)], 3)))
+
+# calculate the adult harvest proportion
+(1 - prop.adults)[which.max(smooth.difference)]  # [1] 0.7416332
+cat(sprintf("Adult harvest proportion (true positive rate): %s\n", round((1 - prop.adults)[which.max(smooth.difference)], 3)))
+```
+
+-----
+
+There are alternative ways to determine cutoffs. Two such cutoffs are described below.
+
+-----
+
+######  Section 8: (10 points)  ###################
+
+(8)(a) Harvesting of infants in CLASS "A1" must be minimized. The smallest volume.value cutoff that produces a zero harvest of infants from CLASS "A1" may be used as a baseline for comparison with larger cutoffs. Any smaller cutoff would result in harvesting infants from CLASS "A1."  
+
+Compute this cutoff, and the proportions of infants and adults with VOLUME exceeding this cutoff. Code for determining this cutoff is provided. Show these proportions.
+
+```{r Part_8a}
+volume.value[volume.value > max(mydata[mydata$CLASS == "A1" &
+  mydata$TYPE == "I", "VOLUME"])][1] # [1] 206.786
+
+# infant proportion exceeding cutoff
+zero.A1.infants_I <- subset(mydata, mydata$TYPE == "I" & mydata$VOLUME > 206.786)
+infant_prop <- nrow(zero.A1.infants_I) / 1036
+
+cat(sprintf("Proportion of infants exceeding A1.zero.infant cutoff (206.786): %s\n", infant_prop))
+
+# adult proportion exceeding cutoff
+zero.A1.infants_A <- subset(mydata, mydata$TYPE == "ADULT" & mydata$VOLUME > 206.786)
+adult_prop <- nrow(zero.A1.infants_A) / 1036
+
+cat(sprintf("Proportion of adults exceeding A1.zero.infant cutoff (206.786): %s\n", adult_prop))
+```
+
+(8)(b) Another cutoff is one for which the proportion of adults not harvested equals the proportion of infants harvested. This cutoff would equate these rates; effectively, our two errors:  'missed' adults and wrongly-harvested infants. This leaves for discussion which is the greater loss:  a larger proportion of adults not harvested or infants harvested?  This cutoff is 237.7383. Calculate the separate harvest proportions for infants and adults using this cutoff. Show these proportions.  Code for determining this cutoff is provided.  
+
+```{r Part_8b}
+volume.value[which.min(abs(prop.adults - (1-prop.infants)))] # [1] 237.6391
+
+# infant proportion exceeding cutoff
+equal.error_I <- subset(mydata, mydata$TYPE == "I" & mydata$VOLUME > 237.6391)
+infant_prop_equal <- nrow(equal.error_I) / 1036
+
+cat(sprintf("Proportion of infants exceeding equal error cutoff (237.6391): %s\n", infant_prop_equal))
+
+# adult proportion exceeding cutoff
+equal.error_A <- subset(mydata, mydata$TYPE == "ADULT" & mydata$VOLUME > 237.6391)
+adult_prop_equal <- nrow(equal.error_A) / 1036
+
+cat(sprintf("Proportion of adults exceeding equal error cutoff (237.6391): %s\n", adult_prop_equal))
+```
+
+
+##### Section 9: (5 points) ###########
+
+(9)(a) Construct an ROC curve by plotting (1 - prop.adults) versus (1 - prop.infants). Each point which appears corresponds to a particular volume.value. Show the location of the cutoffs determined in (7) and (8) on this plot and label each. 
+
+```{r Part_9}
+ROC_infant <- 1 - prop.infants
+ROC_adult <- 1 - prop.adults
+
+plot(x = ROC_infant, y = ROC_adult, 
+     col = "blue", 
+     cex = 2, 
+     pch = ".",
+     main = "ROC Curve of Adult and Infant Harvest Proportions",
+     xlab = "Infant harvest proportion",
+     ylab = "Adult harvest proportion")
+abline(a = 0, b = 1, col = "red", lty = 2)
+
+# 206.786 cutoff (zero.A1.infants)
+(1-prop.infants)[which.max(volume.value > 206.786)]
+(1-prop.adults)[which.max(volume.value > 206.786)]
+# point labeling code
+points(0.2871972, 0.8259705, col = "black", cex = 1.5, pch = 1)
+text(.4, .75, "Zero A1 infants\nVol. = 206.8", cex = 0.8)
+
+# 237.6391 cutoff (equal.error)
+(1-prop.infants)[which.min(abs(prop.adults - (1-prop.infants)))]
+(1-prop.adults)[which.min(abs(prop.adults - (1-prop.infants)))]
+# point labeling code
+points(0.2179931, .7817938, col = "black", cex = 1.5, pch = 1)
+text(0.15, 0.85, "Equal harvest\nVol. = 237.6", cex = 0.8)
+
+# 262.1 cutoff (max smooth.difference)
+(1 - prop.infants)[which.max(smooth.difference)]  
+(1 - prop.adults)[which.max(smooth.difference)]
+# point labeling code
+points(0.1764706, 0.7416332, col = "black", cex = 1.5, pch = 1)
+text(0.25, 0.65, "Max difference\nVol. = 262.1", cex = 0.8)
+```
+
+(9)(b) Numerically integrate the area under the ROC curve and report your result. This is most easily done with the *auc()* function from the "flux" package.   Areas-under-curve, or AUCs, greater than 0.8 are taken to indicate good discrimination potential. 
+
+```{r Part_9b}
+area <- auc(ROC_infant, ROC_adult)
+cat(sprintf("Area under the curve: %s\n", round(area, digits = 3)))
+```
+
+
+##### Section 10: (10 points) ###################
+
+(10)(a) Prepare a table showing each cutoff along with the following:
+ 	1) true positive rate (1-prop.adults,
+ 	2) false positive rate (1-prop.infants),
+ 	3) harvest proportion of the total population
+ 	
+```{r Part_10} 	
+Volume <- c(262.143,206.786,237.691)
+
+# 1) true positive rate (1-prop.adults),
+# max.difference (cutoff = 262.143)
+TPR1 <- signif((1 - prop.adults)[which.max(smooth.difference)], digits = 3)
+
+# zero.A1.infant (cutoff = 206.786)
+TPR2 <- signif((1-prop.adults)[which.max(volume.value > 206.786)], digits = 3)
+
+# equal.harvest (cutoff = 237.6391)
+TPR3 <- signif((1-prop.adults)[which.min(abs(prop.adults - (1-prop.infants)))], digits = 3)
+
+TPRvals <- c(TPR1, TPR2, TPR3)
+
+# 2) false positive rate (1-prop.infants)
+# max.difference (cutoff = 262.143)
+FPR1 <- signif((1 - prop.infants)[which.max(smooth.difference)], digits = 3)
+
+# zero.A1.infant (cutoff = 206.786)
+FPR2 <- signif((1-prop.infants)[which.max(volume.value > 206.786)], digits = 3)
+
+# equal.harvest (cutoff = 237.6391)
+FPR3 <- signif((1-prop.infants)[which.min(abs(prop.adults - (1-prop.infants)))], digits = 3)
+
+FPRvals <- c(FPR1, FPR2, FPR3)
+
+# 3) harvest proportion of the total population
+# max.difference (cutoff = 262.143)
+PY1 <- signif(nrow(subset(mydata, mydata$VOLUME > 262.143))/1036, digits = 3)
+
+# zero.A1.infant (cutoff = 206.786)
+PY2 <- signif(nrow(subset(mydata, mydata$VOLUME > 206.786))/1036, digits = 3)
+
+# equal.harvest (cutoff = 237.6391)
+PY3 <- signif(nrow(subset(mydata, mydata$VOLUME > 237.6391))/1036, digits = 3)
+
+PYvals <- c(PY1, PY2, PY3)
+
+# display values
+propyields <- data.frame(Volume, TPRvals, FPRvals, PYvals)
+colnames(propyields) <- c("Volume", "TPR", "FPR", "PropYield")
+rownames(propyields) <- c("max.difference", "zero.A1.infants", "equal.error")
+
+kable(propyields, align = "c")
+```
+ 	
+**Essay Question: Based on the ROC curve, it is evident a wide range of possible "cutoffs" exist. Compare and discuss the three cutoffs determined in this assignment.**   
+
+Answer: The Max Difference cutoff of 262.143 cubic centimeters, determined by a volume.value corresponding to the observed maximum smoothed difference in harvest percentages of adults and infants, essentially reflects the maximum difference between the true positive rate (the proportion of adults harvested, or sensitivity) and the false positive rate (proportions of infants harvested too early, with a false predicted condition of being ready). This cutoff represents the highest volume cutoff of the three calculated in this analysis, with the lowest level of false positives (infants harvested too early). This cutoff results in the lowest overall proportion yield of the three cutoffs assessed, making it the most conservative cutoff.
+
+The Zero A1 Infants cutoff of 206.786 cubic centimeters represents an effort to minimize harvesting infants in CLASS A1 before they have had time to grow to a sufficient volume to be economically viable for harvesting. The volume.value for this cutoff is significantly smaller than the Max Difference cutoff, but it does have the positive tradeoff of ensuring that infant populations are protected a bit more closely before they are mis-harvested. This cutoff results in a higher overall proportion yield for infants and adults and a slightly higher true positive rate, but a noteable false positive rate must be considered in terms of risk.
+
+The equal harvest rate of 237.6391 cubic centimeters represents the volume.value where the proportion of adults not harvested equals the proportion of infants harvested, essentially equating the two error rates. This cutoff would equate these rates of 'missed' adults or prop.adults and wrongly-harvested infants or 1-prop.infants. This cutoff identifies a point at which these two errors are theoretically equivalent in their potential effect on harvesting. This raises the issue of the long-term loss associated with harvesting infants too early, prioritizing near-term revenue over long-term potential, versus the adults who are not harvested before their peak. This cutoff's volume.value is between the other two cutoffs, with a higher true positive rate, false positive rate, and overall proportion yield than the Max Difference cutoff of 262.1 cubic centimeters. This represents a somewhat middle ground, risk-wise, between the other two cutoffs.
+
+Overall, the area under the curve of 0.867 suggests good discrimination potential for all three cutoff volume.values. Yet each cutoff present issues around the risk of harvesting too soon versus missing an opportunity to harvest at peak volume potential.
+
+**Final Essay Question:  Assume you are expected to make a presentation of your analysis to the investigators How would you do so?  Consider the following in your answer:**
+
+1. Would you make a specific recommendation or outline various choices and tradeoffs?
+
+I would not make a specific recommendation based on these analyses, rather I would outline the various risks and potential rewards of making decisions based on the assessed relationships between characteristic variables in the study and the measures most likely related to ideal harvest timing. I would ensure that the investigators understood the near- and long-term consequences at hand in various harvesting decision-making strategies, where a risk tolerance for false positives could lead to negative impact on future growth and potential of abalone populations on one hand, but profitability and the return on investment in the endeavor must be considered as well. 
+
+2. What qualifications or limitations would you present regarding your analysis?
+
+Since certain sacrifices in terms of data availability and collection processes may be made in observational studies, there are challenges associated with analyzing the data derived. Sample populations in these studies may be challenging to capture information about. In the case of abalones, or any living population of interest for that matter, members change and evolve and adapt to their environment. Any observational study must account for the fact that it is a snapshot, not a comprehensive reflection of that population’s existence. The data collection process may cause stress to the population, which also compromises its integrity. Additionally, assumptions made at the time of study design may no longer be true once the study is conducted, and moreover, by the time data is collected, populations could have changed even more by the time data is analyzed. Data collected through observational studies is likely more prone to confounding and bias as well due to the imperfect nature of the study process and the specific limitations that the population of interest may present.
+
+For this particular study, the background information on the data set mentions difficulties in data collection itself that may have resulted in inaccuracies of measurements. For one, ring clarity “can be an issue”: an accurate assessment of rings dictates class assignment, so any analyses using either RINGS or CLASS are potentially compromised by this reality. The background also mentions the challenge of sexing an abalone, whether young or adult. As a result, analyses and hypotheses based on abalone sex could be based on inaccurate measurements as well. Related to issues of accurate coding of age and sex is the potential confusion in the divisions between categories: specifically, is it precisely clear at what point an infant becomes either an adult male or female? There are males, females, and infants in the A1 class, the youngest group. This raises doubts as to how accurately the sample population was coded for sex.
+
+Additionally, physical measurements, while less prone to measurement error, do not alone form the basis for confirmed hypotheses about a living thing’s development. Abalones are likely attuned to their environment and grow according to factors like food availability and the marine environment (e.g., water quality, salinity, flow, temperature, and the existence of natural predators, to name only a few). Making any conclusive claims about the correlation between physical characteristics and age would be ill-advised without further information on the study site’s specific locale and the circumstances under which the sample population came to being and developed. Moreover, since the sample is made of living things, the population was continuing to change over the course of the study, making this particular observational study unlikely to provide more than lines of inquiry and hypotheses worth testing further. Finally, the presence of outliers would lead me to suggest caution and possibly further analysis in trusting the analysis results at face value. 
+
+3. If it is necessary to proceed based on the current analysis, what suggestions would you have for implementation of a cutoff?  
+
+If it were necessary to proceed, I would recommend a conservative approach to establishing a cutoff for harvesting until more time had passed in testing one strategy or more. This may mean waiting and sacrificing near-term profitability, but would protect future populations in the hope of longer-term sustainable harvesting practices. 
+
+4)  What suggestions would you have for planning future abalone studies of this type? 
+
+I would suggest a more detailed documentation on details of the sample, including information on the region of collection and factors like food availability, diet, and the marine environment (e.g., water quality, salinity, flow, temperature, and the existence of natural predators, as mentioned above). These could potentially serve as additional variables to study, examine for correlations, and use for model development. More analysis of outliers, and potentially dropping some, would be advised as would efforts to reduce the false positive rate. I would recommend more rigor around ring classification if at all possible, and also a financial analysis of the current sample's profitability based on the cutoff decisions made. This would inform whether more risk was tolerable for future harvesting efforts. 
